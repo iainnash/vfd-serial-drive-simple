@@ -38,7 +38,7 @@ awake=pd3=3
 #include <util/delay.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include "test.h"
+#include "platformlibs.h"
 #include "usart.h"
 
 #define SET_BIT(n) (1 << (19 - n))
