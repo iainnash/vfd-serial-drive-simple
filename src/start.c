@@ -1,12 +1,12 @@
 
 /*
-blank=pd5=P5
-mosi=pb3=pin11
-ssck=pb5=13
-load=pc0=A0
-awake=pd3=3
+  hardware pinout:
 
-
+  blank=pd5=P5
+  mosi=pb3=pin11
+  ssck=pb5=13
+  load=pc0=A0
+  awake=pd3=3
 */
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
@@ -218,7 +218,7 @@ ISR(TIMER0_OVF_vect)
     }
     if (blockcounter && !--blockcounter) {
       blockcounter=300;
-      // echo test
+      // shifts in display contents over serial bus
       char in = usart_getc();
       while (in != -1) {
         if (in == 'r') {
