@@ -7,6 +7,12 @@
   ssck=pb5=13
   load=pc0=A0
   awake=pd3=3
+
+  led0=pd4
+  led1=pd7
+
+  ac1=pc2
+  ac2=pc3
 */
 
 #define bitRead(value, bit) (((value) >> (bit)) & 0x01)
@@ -40,6 +46,7 @@
 #include <avr/interrupt.h>
 #include "platformlibs.h"
 #include "usart.h"
+
 
 #define SET_BIT(n) (1 << (19 - n))
 
@@ -245,13 +252,68 @@ ISR(TIMER0_OVF_vect)
 }
 
 // runs every second
-ISR(TIMER2_COMPB_vect)
+ISR(TIMER2_OVF_vect)
 {
   NONATOMIC_BLOCK(NONATOMIC_FORCEOFF)
   {
-    usart_print_str("stick");
+    
+    //usart_print_str("stick");
     // count = 0;
   }
+}
+
+
+// global variable to count the number of overflows
+volatile uint8_t tot_overflow;
+
+// TIMER1 overflow interrupt service routine
+// called whenever TCNT1 overflows
+ISR(TIMER1_OVF_vect)
+{
+
+if (tot_overflow >= 20) {
+  //if (PORTD & (_BV(4) & _BV(7) != 0)) {
+    PORTD ^= _BV(4);
+    PORTD ^= _BV(7);
+
+    PORTC ^= _BV(2);
+    PORTC ^= _BV(3);
+
+    tot_overflow = 0;
+}
+  //}
+  //   // keep a track of number of overflows
+    tot_overflow++;
+  
+  //   // check for number of overflows here itself
+  //   // 61 overflows = 2 seconds delay (approx.)
+  //   if (tot_overflow >= 61) // NOTE: '>=' used instead of '=='
+  //   {
+  //       PORTD ^= _BV(4);
+  //       // no timer reset required here as the timer
+  //       // is reset every time it overflows
+  
+  //       tot_overflow = 0;   // reset overflow counter
+  //   }
+}
+  
+// initialize timer, interrupt and variable
+void timer1_init()
+{
+    // set up timer with prescaler = 8
+    TCCR1B |= (1 << CS11);
+  
+    // initialize counter
+    TCNT1 = 0;
+  
+    // enable overflow interrupt
+    TIMSK1 |= (1 << TOIE1);
+  
+    // enable global interrupts
+    sei();
+  
+    // initialize overflow counter variable
+    tot_overflow = 0;
 }
 
 void setup_interrupts()
@@ -261,7 +323,8 @@ void setup_interrupts()
   }
   cli();
 
-  power_timer2_enable(); // enable timer2
+  // power_timer2_enable(); // enable timer2
+  power_timer1_enable();
   power_timer0_enable();
 
   // setup timer2 for timekeeping with clock crystal
@@ -276,8 +339,11 @@ void setup_interrupts()
   // run the once-per-second interrupt when TCNT2 is zero
   OCR2B = 0;
 
+  timer1_init();
+
+
   // call interrupt on compare match (once per second)
-  TIMSK2 = _BV(OCIE2B);
+  TIMSK2 = _BV(TOIE2);
 
   // timer 0
   TCCR0A = _BV(COM0A1) | _BV(COM0B0) | _BV(COM0B1) | _BV(WGM00) | _BV(WGM01);
@@ -287,6 +353,16 @@ void setup_interrupts()
 
   DDRD |= (1 << DDD6);
   OCR0A = 180; // 50% duty cycle
+
+  DDRD |= _BV(DDD7);
+  DDRD |= _BV(DDD4);
+
+  DDRC |= _BV(DDD2);
+  DDRC |= _BV(DDD3);
+  // turn on LED
+  //PORTC |= _BV(2);
+  // PORTD |= _BV(4);
+
   // // setup boost
   TCCR0A = _BV(COM0A1) | _BV(CS00) | _BV(CS01) | _BV(WGM00) | _BV(WGM01);
 
